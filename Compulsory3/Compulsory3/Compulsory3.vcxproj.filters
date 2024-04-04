@@ -1306,4 +1306,7 @@
     <None Include="default.vert" />
     <None Include="default.frag" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="data.txt" />
+  </ItemGroup>
 </Project>
