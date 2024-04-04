@@ -7,6 +7,7 @@
 #include <vector>
 
 #include"ShaderClass.h"
+#include"CurvedGround.h"
 
 using namespace std;
 
@@ -70,51 +71,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
 }
 
-// Function to read vertices and indices from a file
-void readDataFromFile(const char* filename, std::vector<GLfloat>& vertices, std::vector<GLuint>& indices)
-{
-    ifstream file(filename);
-    if (!file.is_open()) {
-        cout << "Failed to open the file: " << filename << endl;
-        return;
-    }
-
-    string line;
-    bool readingVertices = true;
-
-    while (getline(file, line))
-    {
-        if (line.empty())
-            continue;
-
-        if (line == "// Indices") {
-            readingVertices = false;
-            continue;
-        }
-
-        istringstream iss(line);
-        if (readingVertices) {
-            GLfloat x, y, z, r, g, b;
-            iss >> x >> y >> z >> r >> g >> b;
-            vertices.push_back(x);
-            vertices.push_back(y);
-            vertices.push_back(z);
-            vertices.push_back(r);
-            vertices.push_back(g);
-            vertices.push_back(b);
-        }
-        else {
-            GLuint i1, i2, i3;
-            iss >> i1 >> i2 >> i3;
-            indices.push_back(i1);
-            indices.push_back(i2);
-            indices.push_back(i3);
-        }
-    }
-
-    file.close();
-}
-
 int main() {
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -142,31 +98,8 @@ int main() {
     // Enable depth testing
     glEnable(GL_DEPTH_TEST);
 
-    vector<GLfloat> groundVertices;
-    vector<GLuint> groundIndices;
-    readDataFromFile("data.txt", groundVertices, groundIndices);
-
-    // Generate buffers and populate with data
-    GLuint VBO, VAO, EBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-
-    glBindVertexArray(VAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, groundVertices.size() * sizeof(GLfloat), groundVertices.data(), GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, groundIndices.size() * sizeof(GLuint), groundIndices.data(), GL_STATIC_DRAW);
-
-    // Set vertex attribute pointers, similar to your previous code...
-    // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)0);
-    glEnableVertexAttribArray(0);
-    // Color attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
-    glEnableVertexAttribArray(1);
+    CurvedGround curvedground;
+    curvedground.loadCurvedGround("data.txt");
     
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     // Projection matrix
@@ -208,8 +141,8 @@ int main() {
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, groundIndices.size(), GL_UNSIGNED_INT, 0);
+        glBindVertexArray(curvedground.getVAO());
+        glDrawElements(GL_TRIANGLES, curvedground.getIndexCount(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
 
         glUseProgram(shaderProgram.ID);
@@ -219,10 +152,6 @@ int main() {
         // Swap the screen buffers
         glfwSwapBuffers(window);
     }
-
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
 
     glfwTerminate();
 
