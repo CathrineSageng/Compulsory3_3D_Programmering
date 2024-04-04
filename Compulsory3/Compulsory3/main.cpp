@@ -8,6 +8,7 @@
 
 #include"ShaderClass.h"
 #include"CurvedGround.h"
+#include"Box.h"
 
 using namespace std;
 
@@ -101,6 +102,9 @@ int main() {
     CurvedGround curvedground;
     curvedground.loadCurvedGround("data.txt");
     
+    Box box1;
+    Box box2;
+
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     // Projection matrix
     glm::mat4 projection = glm::perspective(glm::radians(45.0f), (GLfloat)WIDTH / (GLfloat)HEIGHT, 0.1f, 100.0f);
@@ -127,6 +131,10 @@ int main() {
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        // Translate the model matrix of the boxes
+        glm::mat4 modelBox = glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, 0.25f, 1.0f));
+        glm::mat4 modelBox2 = glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 0.25f, 1.0f));
+
         // Use shader program
         shaderProgram.Activate();
 
@@ -144,6 +152,12 @@ int main() {
         glBindVertexArray(curvedground.getVAO());
         glDrawElements(GL_TRIANGLES, curvedground.getIndexCount(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
+
+        // Pass transformation matrices to shader for the boxes
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelBox));
+        box1.drawBox();
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelBox2));
+        box2.drawBox();
 
         glUseProgram(shaderProgram.ID);
         glm::mat4 model = glm::mat4(1.0f); // Identity matrix
