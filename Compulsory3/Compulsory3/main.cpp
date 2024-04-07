@@ -9,68 +9,29 @@
 #include"ShaderClass.h"
 #include"CurvedGround.h"
 #include"Box.h"
+#include"Camera.h"
 
 using namespace std;
 
 const GLuint WIDTH = 1000, HEIGHT = 1000;
-const GLfloat cameraSpeed = 0.001f;
-glm::vec3 cubePosition = glm::vec3(0.0f, 0.5f, 0.0f); // Initial position of the cube
+glm::vec3 cube1Pos(1.0f, 0.125f, 2.0f);
+glm::vec3 cube2Pos(4.0f, 0.25f, 2.0f);
 
 
 // Camera settings
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-GLfloat yaw = -90.0f;
-GLfloat pitch = 0.0f;
+Camera camera(glm::vec3(5.0f, 3.0f, 11.0f));
 GLfloat lastX = WIDTH / 2.0f;
 GLfloat lastY = HEIGHT / 2.0f;
 bool firstMouse = true;
-bool keys[1024];
 
-// Mouse movement callback function
-void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-    if (firstMouse)
-    {
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
-    }
+// timing
+float deltaTime = 0.0f;	// Time between current frame and last frame
+float lastFrame = 0.0f;
 
-    GLfloat xoffset = xpos - lastX;
-    GLfloat yoffset = lastY - ypos;
-    lastX = xpos;
-    lastY = ypos;
-
-    GLfloat sensitivity = 0.05f;
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    yaw += xoffset;
-    pitch += yoffset;
-
-    if (pitch > 89.0f) pitch = 89.0f;
-    if (pitch < -89.0f) pitch = -89.0f;
-
-    glm::vec3 front;
-    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front.y = sin(glm::radians(pitch));
-    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraFront = glm::normalize(front);
-}
-
-// Keyboard input callback function
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode) {
-    GLfloat cameraSpeed = 0.05f;
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, GL_TRUE);
-    if (key >= 0 && key < 1024) {
-        if (action == GLFW_PRESS)
-            keys[key] = true;
-        else if (action == GLFW_RELEASE)
-            keys[key] = false;
-    }
-}
+void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void processInput(GLFWwindow* window);
 
 int main() {
     glfwInit();
@@ -78,13 +39,14 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+    camera.Pitch = -30.f;
 
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "OpenGL Cube with Camera", nullptr, nullptr);
     glfwMakeContextCurrent(window);
 
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
-    glfwSetKeyCallback(window, key_callback);
+    glfwSetScrollCallback(window, scroll_callback);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cout << "Failed to initialize GLAD" << std::endl;
@@ -94,80 +56,115 @@ int main() {
     glViewport(0, 0, WIDTH, HEIGHT);
 
     //Generates Shader object using shaders defualt.vert and default.frag
-    Shader shaderProgram("default.vert", "default.frag");
+    Shader shader("default.vert", "default.frag");
 
     // Enable depth testing
     glEnable(GL_DEPTH_TEST);
 
     CurvedGround curvedground;
     curvedground.loadCurvedGround("data.txt");
-    
+
     Box box1;
     Box box2;
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    // Projection matrix
-    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (GLfloat)WIDTH / (GLfloat)HEIGHT, 0.1f, 100.0f);
-
     // Game loop
     while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
+        float currentFrame = static_cast<float>(glfwGetTime());
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
 
-        GLfloat deltaTime = glfwGetTime();
-        glfwSetTime(0.0f);
+        processInput(window);
 
-        // Handle keyboard input for camera movement
-        if (keys[GLFW_KEY_W])
-            cameraPos += cameraSpeed * cameraFront;
-        if (keys[GLFW_KEY_S])
-            cameraPos -= cameraSpeed * cameraFront;
-        if (keys[GLFW_KEY_A])
-            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-        if (keys[GLFW_KEY_D])
-            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-
-
-        // Clear the color and depth buffers
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Translate the model matrix of the boxes
-        glm::mat4 modelBox = glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, 0.25f, 1.0f));
-        glm::mat4 modelBox2 = glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 0.25f, 1.0f));
+        shader.use();
 
-        // Use shader program
-        shaderProgram.Activate();
+        /// View/projection transformations
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+        glm::mat4 view = camera.GetViewMatrix();
+        shader.setMat4("projection", projection);
+        shader.setMat4("view", view);
 
-        // View matrix
-        glm::mat4 view;
-        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        // World transformation
+        glm::mat4 model = glm::mat4(1.0f);
+        shader.setMat4("model", model);
 
-        // Pass transformation matrices to shader
-        GLint modelLoc = glGetUniformLocation(shaderProgram.ID, "model");
-        GLint viewLoc = glGetUniformLocation(shaderProgram.ID, "view");
-        GLint projLoc = glGetUniformLocation(shaderProgram.ID, "projection");
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-        glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-
+        //Drawing the curved ground
         glBindVertexArray(curvedground.getVAO());
         glDrawElements(GL_TRIANGLES, curvedground.getIndexCount(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
 
-        // Pass transformation matrices to shader for the boxes
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelBox));
+        //Draw a cube object 
+        shader.setMat4("projection", projection);
+        shader.setMat4("view", view);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, cube1Pos);
+        model = glm::scale(model, glm::vec3(0.5f)); // a smaller cube
+        shader.setMat4("model", model);
         box1.drawBox();
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelBox2));
-        box2.drawBox();
 
-        glUseProgram(shaderProgram.ID);
-        glm::mat4 model = glm::mat4(1.0f); // Identity matrix
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        //Draw another cube object 
+        shader.setMat4("projection", projection);
+        shader.setMat4("view", view);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, cube2Pos);
+        shader.setMat4("model", model);
+        box2.drawBox();
 
         // Swap the screen buffers
         glfwSwapBuffers(window);
+        glfwPollEvents();
     }
 
     glfwTerminate();
 
     return 0;
+}
+
+void processInput(GLFWwindow* window)
+{
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        camera.ProcessKeyboard(FORWARD, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        camera.ProcessKeyboard(BACKWARD, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        camera.ProcessKeyboard(LEFT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        camera.ProcessKeyboard(RIGHT, deltaTime);
+}
+
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    glViewport(0, 0, width, height);
+}
+
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
+{
+    float xpos = static_cast<float>(xposIn);
+    float ypos = static_cast<float>(yposIn);
+
+    if (firstMouse)
+    {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos;
+
+    lastX = xpos;
+    lastY = ypos;
+
+    camera.ProcessMouseMovement(xoffset, yoffset);
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+    camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
