@@ -19,6 +19,7 @@ const GLuint WIDTH = 1000, HEIGHT = 1000;
 //Positions of the different objects 
 glm::vec3 cube1Pos(1.0f, 0.25f, 2.0f);
 glm::vec3 cube2Pos(4.0f, 0.50f, 2.0f);
+glm::vec3 characterPos(0.25f, 0.25f, 0.25f);
 glm::vec3 sunPos(4.0f, 2.0f, 2.0f);
 glm::vec3 sunPos2(5.0f, 2.0f, 5.0f);
 glm::vec3 groundPos(0.0f, 0.0f, 0.0f);
@@ -33,6 +34,7 @@ bool firstMouse = true;
 // timing
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f;
+
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -74,7 +76,7 @@ int main() {
 
     Box box1;
     Box box2;
-    Box sun;
+    Box character; 
 
     // load textures (we now use a utility function to keep the code more organized)
   // -----------------------------------------------------------------------------
@@ -167,6 +169,15 @@ int main() {
         glDrawElements(GL_TRIANGLES, curvedground.getIndexCount(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
 
+        //Draw a character object 
+        shader.setMat4("projection", projection);
+        shader.setMat4("view", view);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, characterPos);
+        model = glm::scale(model, glm::vec3(0.50f)); // a smaller cube
+        shader.setMat4("model", model);
+        box1.drawBox();
+
         // Swap the screen buffers
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -182,13 +193,13 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
         camera.ProcessKeyboard(FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
         camera.ProcessKeyboard(BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
         camera.ProcessKeyboard(LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
 }
 

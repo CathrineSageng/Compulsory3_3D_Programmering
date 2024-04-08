@@ -19,6 +19,7 @@ public:
     GLuint getVBO() const;
     GLuint getEBO() const;
     GLsizei getIndexCount() const;
+    void readDataFromFile(const char* filename, vector<GLfloat>& vertices, vector<GLuint>& indices);
 
 private:
     GLuint VAO;
@@ -26,7 +27,7 @@ private:
     GLuint EBO;
     GLsizei indexCount;
 
-    void readDataFromFile(const char* filename, vector<GLfloat>& vertices, vector<GLuint>& indices);
+    
 };
 
 #endif
