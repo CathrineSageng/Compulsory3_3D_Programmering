@@ -18,12 +18,12 @@ using namespace std;
 
 const GLuint WIDTH = 1000, HEIGHT = 1000;
 //Positions of the different objects 
-glm::vec3 cube1Pos(1.0f, 0.25f, 2.0f);
-glm::vec3 cube2Pos(4.0f, 0.50f, 2.0f);
+glm::vec3 cube1Pos(1.0f, 0.0f, 2.0f);
+glm::vec3 cube2Pos(4.0f, 0.25f, 2.0f);
 glm::vec3 characterPos(0.25f, 0.25f, 0.25f);
 glm::vec3 sunPos(4.0f, 2.0f, 2.0f);
 glm::vec3 sunPos2(5.0f, 2.0f, 5.0f);
-glm::vec3 groundPos(0.0f, 0.0f, 0.0f);
+glm::vec3 groundPos(0.0f, -0.25f, 0.0f);
 
 
 // Camera settings
@@ -41,7 +41,7 @@ float lastFrame = 0.0f;
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void processInput(GLFWwindow* window, CurvedGround& curvedground);
+void processInput(GLFWwindow* window, CurvedGround& curvedground, glm::vec3& characterPos);
 unsigned int loadTexture(const char* path);
 glm::vec3 calculateBarycentricCoordinates(const glm::vec3& point, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
 float interpolateHeight(const glm::vec3& characterPos, CurvedGround& ground);
@@ -99,7 +99,7 @@ int main() {
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        processInput(window, curvedground);
+        processInput(window, curvedground, characterPos);
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -200,8 +200,14 @@ int main() {
     return 0;
 }
 
-void processInput(GLFWwindow* window, CurvedGround& curvedground)
+void processInput(GLFWwindow* window, CurvedGround& curvedground, glm::vec3& characterPos)
 {
+    // Define boundaries of the curved ground
+    float minX = 0.0;
+    float maxX = 8.0;
+    float minZ = 0.0;
+    float maxZ = 8.0;
+
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
@@ -216,14 +222,30 @@ void processInput(GLFWwindow* window, CurvedGround& curvedground)
 
     // Move character based on WASD keys
     const float characterSpeed = 2.5f * deltaTime; // Adjust speed as needed
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        characterPos += camera.Front * characterSpeed;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        characterPos -= camera.Front * characterSpeed;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        characterPos -= glm::normalize(glm::cross(camera.Front, camera.Up)) * characterSpeed;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        characterPos += glm::normalize(glm::cross(camera.Front, camera.Up)) * characterSpeed;
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        glm::vec3 newPosition = characterPos + camera.Front * characterSpeed;
+        // Check if new position is within boundaries
+        if (newPosition.x >= minX && newPosition.x <= maxX && newPosition.z >= minZ && newPosition.z <= maxZ)
+            characterPos = newPosition;
+    }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        glm::vec3 newPosition = characterPos - camera.Front * characterSpeed;
+        // Check if new position is within boundaries
+        if (newPosition.x >= minX && newPosition.x <= maxX && newPosition.z >= minZ && newPosition.z <= maxZ)
+            characterPos = newPosition;
+    }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        glm::vec3 newPosition = characterPos - glm::normalize(glm::cross(camera.Front, camera.Up)) * characterSpeed;
+        // Check if new position is within boundaries
+        if (newPosition.x >= minX && newPosition.x <= maxX && newPosition.z >= minZ && newPosition.z <= maxZ)
+            characterPos = newPosition;
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        glm::vec3 newPosition = characterPos + glm::normalize(glm::cross(camera.Front, camera.Up)) * characterSpeed;
+        // Check if new position is within boundaries
+        if (newPosition.x >= minX && newPosition.x <= maxX && newPosition.z >= minZ && newPosition.z <= maxZ)
+            characterPos = newPosition;
+    }
 
     // Adjust character's height based on ground elevation
     float groundHeight = interpolateHeight(characterPos, curvedground);
@@ -345,6 +367,7 @@ float interpolateHeight(const glm::vec3& characterPos, CurvedGround& ground)
             return barycentric.x * v0.y + barycentric.y * v1.y + barycentric.z * v2.y;
         }
     }
+
 
     // Default height if no triangle is found
     return 0.25f;

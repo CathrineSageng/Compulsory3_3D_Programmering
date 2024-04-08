@@ -12,7 +12,6 @@ public:
     ~Box();
     void drawBox();
 
-
 private:
     GLuint VAO;
     GLuint VBO;
