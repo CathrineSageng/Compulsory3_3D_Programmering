@@ -12,6 +12,7 @@
 #include"CurvedGround.h"
 #include"Box.h"
 #include"Camera.h"
+#include "Character.h"
 
 using namespace std;
 
@@ -36,11 +37,16 @@ float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f;
 
 
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void processInput(GLFWwindow* window);
+void processInput(GLFWwindow* window, CurvedGround& curvedground);
 unsigned int loadTexture(const char* path);
+glm::vec3 calculateBarycentricCoordinates(const glm::vec3& point, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
+float interpolateHeight(const glm::vec3& characterPos, CurvedGround& ground);
+glm::vec3 calculateCharacterGroundPosition(const glm::vec3& characterPos, CurvedGround& ground);
+
 
 int main() {
     glfwInit();
@@ -76,7 +82,7 @@ int main() {
 
     Box box1;
     Box box2;
-    Box character; 
+    Character character; 
 
     // load textures (we now use a utility function to keep the code more organized)
   // -----------------------------------------------------------------------------
@@ -93,10 +99,16 @@ int main() {
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        processInput(window);
+        processInput(window, curvedground);
 
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // Calculate the character's position on the ground
+        glm::vec3 characterGroundPos = calculateCharacterGroundPosition(characterPos, curvedground);
+
+        // Update the character's position
+        character.setPosition(characterGroundPos);
 
         shader.use();
         shader.setVec3("light.position", sunPos);
@@ -176,7 +188,7 @@ int main() {
         model = glm::translate(model, characterPos);
         model = glm::scale(model, glm::vec3(0.50f)); // a smaller cube
         shader.setMat4("model", model);
-        box1.drawBox();
+        character.drawCharacter();
 
         // Swap the screen buffers
         glfwSwapBuffers(window);
@@ -188,7 +200,7 @@ int main() {
     return 0;
 }
 
-void processInput(GLFWwindow* window)
+void processInput(GLFWwindow* window, CurvedGround& curvedground)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -201,6 +213,21 @@ void processInput(GLFWwindow* window)
         camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
+
+    // Move character based on WASD keys
+    const float characterSpeed = 2.5f * deltaTime; // Adjust speed as needed
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        characterPos += camera.Front * characterSpeed;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        characterPos -= camera.Front * characterSpeed;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        characterPos -= glm::normalize(glm::cross(camera.Front, camera.Up)) * characterSpeed;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        characterPos += glm::normalize(glm::cross(camera.Front, camera.Up)) * characterSpeed;
+
+    // Adjust character's height based on ground elevation
+    float groundHeight = interpolateHeight(characterPos, curvedground);
+    characterPos.y = groundHeight;
 }
 
 
@@ -272,4 +299,82 @@ unsigned int loadTexture(char const* path)
     }
 
     return textureID;
+}
+
+glm::vec3 calculateBarycentricCoordinates(const glm::vec3& point, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2) 
+{
+    glm::vec3 v0v1 = v1 - v0;
+    glm::vec3 v0v2 = v2 - v0;
+    glm::vec3 v0p = point - v0;
+
+    float d00 = glm::dot(v0v1, v0v1);
+    float d01 = glm::dot(v0v1, v0v2);
+    float d11 = glm::dot(v0v2, v0v2);
+    float d20 = glm::dot(v0p, v0v1);
+    float d21 = glm::dot(v0p, v0v2);
+    float denom = d00 * d11 - d01 * d01;
+
+    glm::vec3 barycentric;
+    barycentric.y = (d11 * d20 - d01 * d21) / denom;
+    barycentric.z = (d00 * d21 - d01 * d20) / denom;
+    barycentric.x = 1.0f - barycentric.y - barycentric.z;
+
+    return barycentric;
+}
+
+float interpolateHeight(const glm::vec3& characterPos, CurvedGround& ground) 
+{
+    // Get the vertices and indices of the curved ground
+    std::vector<GLfloat> vertices;
+    std::vector<GLuint> indices;
+    ground.readDataFromFile("data.txt", vertices, indices);
+
+    // Iterate through each triangle in the ground
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        // Get the vertices of the current triangle
+        glm::vec3 v0(vertices[indices[i] * 6], vertices[indices[i] * 6 + 1], vertices[indices[i] * 6 + 2]);
+        glm::vec3 v1(vertices[indices[i + 1] * 6], vertices[indices[i + 1] * 6 + 1], vertices[indices[i + 1] * 6 + 2]);
+        glm::vec3 v2(vertices[indices[i + 2] * 6], vertices[indices[i + 2] * 6 + 1], vertices[indices[i + 2] * 6 + 2]);
+
+        // Calculate barycentric coordinates
+        glm::vec3 barycentric = calculateBarycentricCoordinates(characterPos, v0, v1, v2);
+
+        // Check if the character is inside the current triangle
+        if (barycentric.x >= 0 && barycentric.y >= 0 && barycentric.z >= 0) {
+            // Interpolate height using barycentric coordinates
+            return barycentric.x * v0.y + barycentric.y * v1.y + barycentric.z * v2.y;
+        }
+    }
+
+    // Default height if no triangle is found
+    return 0.25f;
+}
+
+glm::vec3 calculateCharacterGroundPosition(const glm::vec3& characterPos, CurvedGround& ground) 
+{
+    // Get the vertices and indices of the curved ground
+    std::vector<GLfloat> vertices;
+    std::vector<GLuint> indices;
+    ground.readDataFromFile("data.txt", vertices, indices);
+
+    // Iterate through each triangle in the ground
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        // Get the vertices of the current triangle
+        glm::vec3 v0(vertices[indices[i] * 6], vertices[indices[i] * 6 + 1], vertices[indices[i] * 6 + 2]);
+        glm::vec3 v1(vertices[indices[i + 1] * 6], vertices[indices[i + 1] * 6 + 1], vertices[indices[i + 1] * 6 + 2]);
+        glm::vec3 v2(vertices[indices[i + 2] * 6], vertices[indices[i + 2] * 6 + 1], vertices[indices[i + 2] * 6 + 2]);
+
+        // Calculate barycentric coordinates
+        glm::vec3 barycentric = calculateBarycentricCoordinates(characterPos, v0, v1, v2);
+
+        // Check if the character is inside the current triangle
+        if (barycentric.x >= 0 && barycentric.y >= 0 && barycentric.z >= 0) {
+            // Interpolate height using barycentric coordinates
+            float interpolatedHeight = barycentric.x * v0.y + barycentric.y * v1.y + barycentric.z * v2.y;
+            return glm::vec3(characterPos.x, interpolatedHeight, characterPos.z);
+        }
+    }
+
+    // Default position if no triangle is found
+    return glm::vec3(characterPos.x, 0.25f, characterPos.z);
 }
