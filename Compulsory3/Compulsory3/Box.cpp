@@ -1,9 +1,13 @@
 #include "Box.h"
 
-Box::Box()
+Box::Box(glm::vec3 position, float width, float height, float depth)
 {
     VBO = 0;
     VAO = 0;
+
+    // Calculate minimum and maximum coordinates of the bounding box
+    minCoords = position - glm::vec3(width / 2.0f, height / 2.0f, depth / 2.0f);
+    maxCoords = position + glm::vec3(width / 2.0f, height / 2.0f, depth / 2.0f);
    
 
     float vertices[] = {
@@ -82,4 +86,14 @@ void Box::drawBox()
     glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
+}
+
+glm::vec3 Box::getMin() const
+{
+    return minCoords;
+}
+
+glm::vec3 Box::getMax() const
+{
+    return maxCoords;
 }

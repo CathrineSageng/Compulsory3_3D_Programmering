@@ -36,7 +36,7 @@ bool firstMouse = true;
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f;
 
-
+vector<Box> boxes;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -46,6 +46,7 @@ unsigned int loadTexture(const char* path);
 glm::vec3 calculateBarycentricCoordinates(const glm::vec3& point, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2);
 float interpolateHeight(const glm::vec3& characterPos, CurvedGround& ground);
 glm::vec3 calculateCharacterGroundPosition(const glm::vec3& characterPos, CurvedGround& ground);
+bool detectCollision(const glm::vec3& characterPos, const glm::vec3& boxMin, const glm::vec3& boxMax);
 
 
 int main() {
@@ -80,8 +81,11 @@ int main() {
     CurvedGround curvedground;
     curvedground.loadCurvedGround("data.txt");
 
-    Box box1;
-    Box box2;
+    Box box1(cube1Pos, 1.0f, 1.0f, 1.0f);  //Position and size 
+    Box box2(cube2Pos, 1.5f, 1.5f, 1.5f);  
+
+    boxes.push_back(box1);
+    boxes.push_back(box2);
     Character character; 
 
     // load textures (we now use a utility function to keep the code more organized)
@@ -224,26 +228,62 @@ void processInput(GLFWwindow* window, CurvedGround& curvedground, glm::vec3& cha
     const float characterSpeed = 2.5f * deltaTime; // Adjust speed as needed
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
         glm::vec3 newPosition = characterPos + camera.Front * characterSpeed;
-        // Check if new position is within boundaries
-        if (newPosition.x >= minX && newPosition.x <= maxX && newPosition.z >= minZ && newPosition.z <= maxZ)
+        // Check for collisions with boxes
+        bool collisionDetected = false;
+        for (const auto& box : boxes) {
+            if (detectCollision(newPosition, box.getMin(), box.getMax())) {
+                // Collision detected with this box, don't allow movement
+                collisionDetected = true;
+                break;
+            }
+        }
+        // If no collision detected and within boundaries, update character position
+        if (!collisionDetected && newPosition.x >= minX && newPosition.x <= maxX && newPosition.z >= minZ && newPosition.z <= maxZ)
             characterPos = newPosition;
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
         glm::vec3 newPosition = characterPos - camera.Front * characterSpeed;
-        // Check if new position is within boundaries
-        if (newPosition.x >= minX && newPosition.x <= maxX && newPosition.z >= minZ && newPosition.z <= maxZ)
+        // Check for collisions with boxes
+        bool collisionDetected = false;
+        for (const auto& box : boxes) {
+            if (detectCollision(newPosition, box.getMin(), box.getMax())) {
+                // Collision detected with this box, don't allow movement
+                collisionDetected = true;
+                break;
+            }
+        }
+        // If no collision detected and within boundaries, update character position
+        if (!collisionDetected && newPosition.x >= minX && newPosition.x <= maxX && newPosition.z >= minZ && newPosition.z <= maxZ)
             characterPos = newPosition;
     }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
         glm::vec3 newPosition = characterPos - glm::normalize(glm::cross(camera.Front, camera.Up)) * characterSpeed;
-        // Check if new position is within boundaries
-        if (newPosition.x >= minX && newPosition.x <= maxX && newPosition.z >= minZ && newPosition.z <= maxZ)
+        // Check for collisions with boxes
+        bool collisionDetected = false;
+        for (const auto& box : boxes) {
+            if (detectCollision(newPosition, box.getMin(), box.getMax())) {
+                // Collision detected with this box, don't allow movement
+                collisionDetected = true;
+                break;
+            }
+        }
+        // If no collision detected and within boundaries, update character position
+        if (!collisionDetected && newPosition.x >= minX && newPosition.x <= maxX && newPosition.z >= minZ && newPosition.z <= maxZ)
             characterPos = newPosition;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         glm::vec3 newPosition = characterPos + glm::normalize(glm::cross(camera.Front, camera.Up)) * characterSpeed;
-        // Check if new position is within boundaries
-        if (newPosition.x >= minX && newPosition.x <= maxX && newPosition.z >= minZ && newPosition.z <= maxZ)
+        // Check for collisions with boxes
+        bool collisionDetected = false;
+        for (const auto& box : boxes) {
+            if (detectCollision(newPosition, box.getMin(), box.getMax())) {
+                // Collision detected with this box, don't allow movement
+                collisionDetected = true;
+                break;
+            }
+        }
+        // If no collision detected and within boundaries, update character position
+        if (!collisionDetected && newPosition.x >= minX && newPosition.x <= maxX && newPosition.z >= minZ && newPosition.z <= maxZ)
             characterPos = newPosition;
     }
 
@@ -251,7 +291,6 @@ void processInput(GLFWwindow* window, CurvedGround& curvedground, glm::vec3& cha
     float groundHeight = interpolateHeight(characterPos, curvedground);
     characterPos.y = groundHeight;
 }
-
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -400,4 +439,11 @@ glm::vec3 calculateCharacterGroundPosition(const glm::vec3& characterPos, Curved
 
     // Default position if no triangle is found
     return glm::vec3(characterPos.x, 0.25f, characterPos.z);
+}
+
+bool detectCollision(const glm::vec3& characterPos, const glm::vec3& boxMin, const glm::vec3& boxMax) {
+    // Check if character's position is within the bounding box defined by boxMin and boxMax
+    return (characterPos.x >= boxMin.x && characterPos.x <= boxMax.x &&
+        characterPos.y >= boxMin.y && characterPos.y <= boxMax.y &&
+        characterPos.z >= boxMin.z && characterPos.z <= boxMax.z);
 }
