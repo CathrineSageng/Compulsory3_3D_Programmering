@@ -1,8 +1,6 @@
 #include<iostream>
 #include<glad/glad.h>
 #include<GLFW/glfw3.h>
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 #include<glm/glm.hpp>
 #include<glm/gtc/matrix_transform.hpp>
 #include<glm/gtc/type_ptr.hpp>
@@ -13,6 +11,8 @@
 #include"Box.h"
 #include"Camera.h"
 #include "Character.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 using namespace std;
 
@@ -88,8 +88,6 @@ int main() {
     boxes.push_back(box2);
     Character character; 
 
-    // load textures (we now use a utility function to keep the code more organized)
-  // -----------------------------------------------------------------------------
     unsigned int diffuseMap = loadTexture("Textures/container2.jpg");
     unsigned int specularMap = loadTexture("Textures/container2_specular.jpg");
 
@@ -98,7 +96,8 @@ int main() {
     shader.setInt("material.specular", 1);
 
     // Game loop
-    while (!glfwWindowShouldClose(window)) {
+    while (!glfwWindowShouldClose(window)) 
+    {
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
@@ -124,7 +123,6 @@ int main() {
         shader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
 
         // material properties
-        //shader.setVec3("material.specular", 0.5f, 0.5f, 0.5f); // specular lighting doesn't have full effect on this object's material
         shader.setFloat("material.shininess", 64.0f);
 
         /// View/projection transformations
@@ -224,20 +222,22 @@ void processInput(GLFWwindow* window, CurvedGround& curvedground, glm::vec3& cha
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
 
-    // Move character based on WASD keys
-    const float characterSpeed = 2.5f * deltaTime; // Adjust speed as needed
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+    // Move character ith WASD
+    const float characterSpeed = 2.5f * deltaTime; 
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) 
+    {
         glm::vec3 newPosition = characterPos + camera.Front * characterSpeed;
         // Check for collisions with boxes
         bool collisionDetected = false;
         for (const auto& box : boxes) {
-            if (detectCollision(newPosition, box.getMin(), box.getMax())) {
-                // Collision detected with this box, don't allow movement
+            if (detectCollision(newPosition, box.getMin(), box.getMax())) 
+            {
+                // Movement of the character is not allowed
                 collisionDetected = true;
                 break;
             }
         }
-        // If no collision detected and within boundaries, update character position
+        // If no collision are detected, the movement of the character is updated. 
         if (!collisionDetected && newPosition.x >= minX && newPosition.x <= maxX && newPosition.z >= minZ && newPosition.z <= maxZ)
             characterPos = newPosition;
     }
@@ -246,48 +246,44 @@ void processInput(GLFWwindow* window, CurvedGround& curvedground, glm::vec3& cha
         // Check for collisions with boxes
         bool collisionDetected = false;
         for (const auto& box : boxes) {
-            if (detectCollision(newPosition, box.getMin(), box.getMax())) {
-                // Collision detected with this box, don't allow movement
+            if (detectCollision(newPosition, box.getMin(), box.getMax())) 
+            {
+                // Collision detected with this box, the character will stop moving
                 collisionDetected = true;
                 break;
             }
         }
-        // If no collision detected and within boundaries, update character position
+        // If no collision detected the character continues moving
         if (!collisionDetected && newPosition.x >= minX && newPosition.x <= maxX && newPosition.z >= minZ && newPosition.z <= maxZ)
             characterPos = newPosition;
     }
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) 
+    {
         glm::vec3 newPosition = characterPos - glm::normalize(glm::cross(camera.Front, camera.Up)) * characterSpeed;
-        // Check for collisions with boxes
         bool collisionDetected = false;
         for (const auto& box : boxes) {
             if (detectCollision(newPosition, box.getMin(), box.getMax())) {
-                // Collision detected with this box, don't allow movement
                 collisionDetected = true;
                 break;
             }
         }
-        // If no collision detected and within boundaries, update character position
         if (!collisionDetected && newPosition.x >= minX && newPosition.x <= maxX && newPosition.z >= minZ && newPosition.z <= maxZ)
             characterPos = newPosition;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         glm::vec3 newPosition = characterPos + glm::normalize(glm::cross(camera.Front, camera.Up)) * characterSpeed;
-        // Check for collisions with boxes
         bool collisionDetected = false;
         for (const auto& box : boxes) {
-            if (detectCollision(newPosition, box.getMin(), box.getMax())) {
-                // Collision detected with this box, don't allow movement
+            if (detectCollision(newPosition, box.getMin(), box.getMax())) 
+            {
                 collisionDetected = true;
                 break;
             }
         }
-        // If no collision detected and within boundaries, update character position
         if (!collisionDetected && newPosition.x >= minX && newPosition.x <= maxX && newPosition.z >= minZ && newPosition.z <= maxZ)
             characterPos = newPosition;
     }
 
-    // Adjust character's height based on ground elevation
     float groundHeight = interpolateHeight(characterPos, curvedground);
     characterPos.y = groundHeight;
 }
@@ -323,8 +319,6 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
-// utility function for loading a 2D texture from file
-// ---------------------------------------------------
 unsigned int loadTexture(char const* path)
 {
     unsigned int textureID;
@@ -391,7 +385,8 @@ float interpolateHeight(const glm::vec3& characterPos, CurvedGround& ground)
     ground.readDataFromFile("data.txt", vertices, indices);
 
     // Iterate through each triangle in the ground
-    for (size_t i = 0; i < indices.size(); i += 3) {
+    for (size_t i = 0; i < indices.size(); i += 3) 
+    {
         // Get the vertices of the current triangle
         glm::vec3 v0(vertices[indices[i] * 6], vertices[indices[i] * 6 + 1], vertices[indices[i] * 6 + 2]);
         glm::vec3 v1(vertices[indices[i + 1] * 6], vertices[indices[i + 1] * 6 + 1], vertices[indices[i + 1] * 6 + 2]);
@@ -406,8 +401,6 @@ float interpolateHeight(const glm::vec3& characterPos, CurvedGround& ground)
             return barycentric.x * v0.y + barycentric.y * v1.y + barycentric.z * v2.y;
         }
     }
-
-
     // Default height if no triangle is found
     return 0.25f;
 }
@@ -420,7 +413,8 @@ glm::vec3 calculateCharacterGroundPosition(const glm::vec3& characterPos, Curved
     ground.readDataFromFile("data.txt", vertices, indices);
 
     // Iterate through each triangle in the ground
-    for (size_t i = 0; i < indices.size(); i += 3) {
+    for (size_t i = 0; i < indices.size(); i += 3) 
+    {
         // Get the vertices of the current triangle
         glm::vec3 v0(vertices[indices[i] * 6], vertices[indices[i] * 6 + 1], vertices[indices[i] * 6 + 2]);
         glm::vec3 v1(vertices[indices[i + 1] * 6], vertices[indices[i + 1] * 6 + 1], vertices[indices[i + 1] * 6 + 2]);
@@ -430,7 +424,8 @@ glm::vec3 calculateCharacterGroundPosition(const glm::vec3& characterPos, Curved
         glm::vec3 barycentric = calculateBarycentricCoordinates(characterPos, v0, v1, v2);
 
         // Check if the character is inside the current triangle
-        if (barycentric.x >= 0 && barycentric.y >= 0 && barycentric.z >= 0) {
+        if (barycentric.x >= 0 && barycentric.y >= 0 && barycentric.z >= 0) 
+        {
             // Interpolate height using barycentric coordinates
             float interpolatedHeight = barycentric.x * v0.y + barycentric.y * v1.y + barycentric.z * v2.y;
             return glm::vec3(characterPos.x, interpolatedHeight, characterPos.z);
@@ -441,7 +436,8 @@ glm::vec3 calculateCharacterGroundPosition(const glm::vec3& characterPos, Curved
     return glm::vec3(characterPos.x, 0.25f, characterPos.z);
 }
 
-bool detectCollision(const glm::vec3& characterPos, const glm::vec3& boxMin, const glm::vec3& boxMax) {
+bool detectCollision(const glm::vec3& characterPos, const glm::vec3& boxMin, const glm::vec3& boxMax) 
+{
     // Check if character's position is within the bounding box defined by boxMin and boxMax
     return (characterPos.x >= boxMin.x && characterPos.x <= boxMax.x &&
         characterPos.y >= boxMin.y && characterPos.y <= boxMax.y &&

@@ -35,7 +35,6 @@ void CurvedGround::loadCurvedGround(const char* filename)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, groundIndices.size() * sizeof(GLuint), groundIndices.data(), GL_STATIC_DRAW);
 
-    // Set vertex attribute pointers, similar to your previous code...
     // Position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)0);
     glEnableVertexAttribArray(0);
@@ -47,8 +46,6 @@ void CurvedGround::loadCurvedGround(const char* filename)
 
     glBindVertexArray(0);
 }
-
-
 
 void CurvedGround::readDataFromFile(const char* filename, vector<GLfloat>& vertices, vector<GLuint>& indices)
 {

@@ -26,8 +26,6 @@ private:
     GLuint VBO;
     GLuint EBO;
     GLsizei indexCount;
-
-    
 };
 
 #endif
