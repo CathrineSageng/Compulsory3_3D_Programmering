@@ -17,7 +17,9 @@
 
 using namespace std;
 
+//Width and height of the screen
 const GLuint WIDTH = 1000, HEIGHT = 1000;
+
 //Positions of the different objects 
 glm::vec3 cube1Pos(1.0f, 0.0f, 2.0f);
 glm::vec3 cube2Pos(4.0f, 0.25f, 2.0f);
@@ -32,8 +34,8 @@ GLfloat lastX = WIDTH / 2.0f;
 GLfloat lastY = HEIGHT / 2.0f;
 bool firstMouse = true;
 
-// timing
-float deltaTime = 0.0f;	// Time between current frame and last frame
+// Time between current frame and last frame
+float deltaTime = 0.0f;	
 float lastFrame = 0.0f;
 
 vector<Box> boxes;
@@ -66,7 +68,7 @@ int main() {
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
     camera.Pitch = -30.f;
 
-    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "OpenGL Cube with Camera", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Scene", nullptr, nullptr);
     glfwMakeContextCurrent(window);
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -212,7 +214,7 @@ int main() {
         // material properties
         GroundShader.setVec3("material.ambient", 0.0f, 0.3f, 0.0f);
         GroundShader.setVec3("material.diffuse", 0.0f, 0.8f, 0.0f);
-        GroundShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f); // specular lighting doesn't have full effect on this object's material
+        GroundShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f); 
         GroundShader.setFloat("material.shininess", 32.0f);
 
         GroundShader.setMat4("projection", projection);
@@ -289,7 +291,7 @@ void processInput(GLFWwindow* window, CurvedGround& curvedground, glm::vec3& cha
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
 
-    // Move character ith WASD
+    // Move character with WASD
     const float characterSpeed = 2.5f * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     {
